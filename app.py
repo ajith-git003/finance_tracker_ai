@@ -30,6 +30,10 @@ if 'current_view' not in st.session_state:
 if 'category_filter' not in st.session_state:
     st.session_state.category_filter = None
 
+@st.cache_resource
+def get_rag_engine():
+    return RAGEngine()
+
 if 'data' not in st.session_state:
     # Initial Mock Data Load (will be replaced by CSV if uploaded)
     dates = pd.date_range(end=datetime.today(), periods=30)
@@ -43,9 +47,13 @@ if 'data' not in st.session_state:
     st.session_state.data = pd.DataFrame(data)
     st.session_state.is_demo = True
 
-    if 'rag' not in st.session_state:
-        st.session_state.rag = RAGEngine()
+if 'rag' not in st.session_state:
+    st.session_state.rag = get_rag_engine()
+    # Only ingest if not already done or if data changed
+    # Using a flag to prevent re-ingestion on every rerun
+    if not st.session_state.get('rag_ready', False):
         st.session_state.rag.ingest_data(st.session_state.data)
+        st.session_state.rag_ready = True
 
 df = st.session_state.data
 
@@ -529,21 +537,33 @@ def render_settings():
         st.rerun()
 
 # --- MAIN NAVIGATION & RENDER ---
-cols = st.columns(4)
 with st.container():
     c1, c2, c3, c4 = st.columns(4)
-    if c1.button("🏠 Home", use_container_width=True): st.session_state.current_view = 'Home'; st.rerun()
-    if c2.button("📊 Analytics", use_container_width=True): st.session_state.current_view = 'Analytics'; st.rerun()
-    if c3.button("🤖 AI", use_container_width=True): st.session_state.current_view = 'AI Advisor'; st.rerun()
-    if c4.button("⚙️ Settings", use_container_width=True): st.session_state.current_view = 'Settings'; st.rerun()
+    if c1.button("🏠 Home", use_container_width=True): 
+        if st.session_state.current_view != 'Home':
+            st.session_state.current_view = 'Home'
+            st.rerun()
+    if c2.button("📊 Analytics", use_container_width=True): 
+        if st.session_state.current_view != 'Analytics':
+            st.session_state.current_view = 'Analytics'
+            st.rerun()
+    if c3.button("🤖 AI", use_container_width=True): 
+        if st.session_state.current_view != 'AI Advisor':
+            st.session_state.current_view = 'AI Advisor'
+            st.rerun()
+    if c4.button("⚙️ Settings", use_container_width=True): 
+        if st.session_state.current_view != 'Settings':
+            st.session_state.current_view = 'Settings'
+            st.rerun()
 
 st.divider()
 
-if st.session_state.current_view == 'Home':
+view = st.session_state.current_view
+if view == 'Home':
     render_home()
-elif st.session_state.current_view == 'Analytics':
+elif view == 'Analytics':
     render_analytics()
-elif st.session_state.current_view == 'AI Advisor':
+elif view == 'AI Advisor':
     render_ai_advisor()
-elif st.session_state.current_view == 'Settings':
+elif view == 'Settings':
     render_settings()
