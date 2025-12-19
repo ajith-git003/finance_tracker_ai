@@ -1,0 +1,10 @@
+
+__pycache__/
+*.py[cod]
+.env
+.venv/
+.gemini/
+.streamlit/
+*.json
+!requirements.json
+serviceAccountKey.json
